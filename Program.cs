@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Security;
 using System.Text;
 
 namespace AOC2017
@@ -36,11 +39,7 @@ namespace AOC2017
                 }
                 else
                 {
-                    personSelect = ParsePerson(arg);
-                    if (personSelect == null)
-                    {
-                        Console.WriteLine($"Unrecognized argument: {arg}");
-                    }
+                    Console.WriteLine($"Unrecognized argument: {arg}");
                 }
             }
 
@@ -66,60 +65,84 @@ namespace AOC2017
                 }
             }
 
-            if (personSelect == null)
-            {
-                Console.Write("Please select peron: ");
-                while (personSelect == null)
-                {
-                    personSelect = ParsePerson(Console.ReadLine());
-                    if (personSelect == null)
-                    {
-                        Console.Write("Please provide a valid person: ");
-                    }
-                }
-            }
-
-            RunPuzzle(puzzleSelect, personSelect.Value);
+            RunPuzzle(puzzleSelect);
 
             Console.ReadKey();
         }
 
-        static void RunPuzzle(string puzzleSelect, Person personSelect)
+        static string GetFilePath(string puzzleSelect, Person personSelect) 
+        {
+            return $"./Puzzles/{personSelect}/{puzzleSelect.Split('.')[0]}.txt";
+        }
+
+        static string GetFileInput(string puzzleInput, Person person) => File.ReadAllText(GetFilePath(puzzleInput, person));
+
+        static void RunPuzzle(string puzzleSelect)
         {
             int puzzleNumInput = (int)Double.Parse(puzzleSelect);
-            string fileInput = File.ReadAllText($"./Puzzles/{personSelect}/{puzzleNumInput}.txt");
-
+            
+            int blynxy_out = 0; int spence_out = 0;
             switch(puzzleSelect) {
 
                 case "1":
-                    Puzzle1(fileInput);
+                    //Puzzle1(fileInput);
                     break;
                 case "1.2":
-                    Puzzle1_2(fileInput);
+                    //Puzzle1_2(fileInput);
                     break;
                 case "2":
-                    if (personSelect == Person.Spencer)
-                        Puzzle2_Spencer(fileInput);
-                    else if (personSelect == Person.Blonxy)
-                        Puzzle2_Blonxy(fileInput.ToCharArray());
+                    //if (personSelect == Person.Spencer)
+                    //    Puzzle2_Spencer(fileInput);
+                    //else if (personSelect == Person.Blonxy)
+                    //    Puzzle2_Blonxy(fileInput.ToCharArray());
                     break;
                 case "2.2":
-                    Puzzle2_2(fileInput);
+                    //Puzzle2_2(fileInput);
                     break;
                 case "3":
-                    Puzzle3(fileInput);
+                    //Puzzle3(fileInput);
                     break;
                 case "3.2":
-                    if (personSelect == Person.Blonxy)
-                        Puzzle3_2Blynxy(fileInput);
-                    else if (personSelect == Person.Spencer)
-                        Puzzle3_2Spencer(fileInput);
+                    //if (personSelect == Person.Blonxy)
+                    //    Puzzle3_2Blynxy(fileInput);
+                    //else if (personSelect == Person.Spencer)
+                    //    Puzzle3_2Spencer(fileInput);
                     break;
                 case "4":
+                    //Puzzle4(fileInput);
+                    // Puzzle4LINQ(filePath);
                     break;
+                case "4.2":
+                
+                    blynxy_out = Puzzle4_2(GetFilePath(puzzleSelect, Person.Blonxy));
+                    Console.WriteLine("\n");
+                    spence_out = Puzzle4_2(GetFilePath(puzzleSelect, Person.Spencer));
+                    Console.WriteLine($"s:{spence_out}  b:{blynxy_out}");
+                    break;
+                
                 case "5":
+                    blynxy_out = Puzzle5(GetFilePath(puzzleSelect, Person.Blonxy));
+                    Console.WriteLine("\n");
+                    spence_out = Puzzle5(GetFilePath(puzzleSelect, Person.Spencer));
+                    Console.WriteLine($"s:{spence_out}  b:{blynxy_out}");
+                    break;
+                case "5.2":
+                    blynxy_out = Puzzle5_2(GetFilePath(puzzleSelect, Person.Blonxy));
+                    Console.WriteLine("\n");
+                    spence_out = Puzzle5_2(GetFilePath(puzzleSelect, Person.Spencer));
+                    Console.WriteLine($"s:{spence_out}  b:{blynxy_out}");
                     break;
                 case "6":
+                    blynxy_out = Puzzle6(GetFilePath(puzzleSelect, Person.Blonxy));
+                    Console.WriteLine("\nSpencer Start");
+                    spence_out = Puzzle6(GetFilePath(puzzleSelect, Person.Spencer));
+                    Console.WriteLine($"s:{spence_out}  b:{blynxy_out}");
+                    break;
+                case "6.2":
+                    blynxy_out = Puzzle6_2(GetFilePath(puzzleSelect, Person.Blonxy));
+                    Console.WriteLine("\nSpencer Start");
+                    spence_out = Puzzle6_2(GetFilePath(puzzleSelect, Person.Spencer));
+                    Console.WriteLine($"s:{spence_out}  b:{blynxy_out}");
                     break;
                 case "7":
                     break;
@@ -619,30 +642,313 @@ namespace AOC2017
         {
             // read in the next word
             char[] chars = fileInput.ToCharArray();
+            HashSet<string> words = new HashSet<string>();
+            StringBuilder next_word = new StringBuilder();
+            int total_valid = 0;
+            bool invalid_code = false;
+            int line_number = 1;
 
-            string next_word;
             foreach (var next_char in chars)
             {
-                // check line
-                while (next_char != '\n')
-                {
-                    HashSet<string> hash = new HashSet<string>();
-                    next_word = "";
+                if (next_char == '\r') continue;
+                if (invalid_code && next_char != '\n') continue;
 
-                    // next 
-                    while (next_char != ' ')
+                // process word if ' ' or end of line
+                if ((next_char == ' ' || next_char == '\n') && !invalid_code)
+                {
+                    // check hash for next_word
+                    string word = next_word.ToString();
+                    if (words.Contains(word))
                     {
-                        next_word += next_char;
+                        invalid_code = true;
+                    } 
+                    else
+                    {
+                        words.Add(word);
                     }
-                    // check word, if not in hash
+
+                    next_word.Clear();
                 }
 
-                // deal with it
+                // process line if \n
+                if (next_char == '\n')
+                {
+                    if (!invalid_code) total_valid++;
+                    
 
+
+                    if (invalid_code)
+                    {
+                        Console.WriteLine(line_number + " " + !invalid_code + " " + string.Join(",", words));
+                    }
+                    line_number++;
+                    words.Clear();
+                    invalid_code = false;
+                    
+
+                    continue;
+                }
+
+                // append letter to current_word
+                if (next_char != ' ' && next_char != '\n')
+                {
+                    next_word.Append(next_char);
+                }
             }
             
-            // you make the other part
+            Console.WriteLine(total_valid);
         }
 
+        static void Puzzle4LINQ(string filePath)
+        {
+            var lines = File.ReadAllLines(filePath);
+            int totalValid = 0;
+            int linenumber = 1;
+            foreach (var line in lines)
+            {
+                string[] words = line.Split(' ');
+                if (words.Distinct().Count() == words.Length)
+                {
+                    totalValid++;
+                }
+                else
+                {
+                    Console.WriteLine(linenumber);
+                }
+
+                linenumber++;
+            }
+            Console.WriteLine(totalValid);
+        }
+
+        static int Puzzle4_2(string filePath)
+        {
+            var lines = File.ReadAllLines(filePath);
+            int totalValid = 0;
+            int linenumber = 1;
+
+            const bool debug = false;
+
+            foreach (var line in lines)
+            {
+                string[] words = line.Split(' ').Select(str => string.Concat(str.OrderBy(c => c))).ToArray();
+                if (words.Distinct().Count() == words.Length)
+                {
+                    totalValid++;
+                }
+                else if (debug)
+                {
+                    Console.WriteLine(linenumber);
+                }
+
+                linenumber++;
+            }
+
+            return totalValid;
+        }
+    
+        static int Puzzle5(string filePath)
+        {
+            // maze
+            // -1 moves previous instruction
+            // 2 skips next one
+            // start at index 0
+            // follow until out of bound
+            // record followed steps
+
+            int followed_steps = 0;
+            int current_instruction_index = 0;
+            //List<int> instructions = fileInput.Split(new[] {'\r', '\n'}, StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x)).ToList();
+
+            List<int> instructions = new List<int>();
+            var lines = File.ReadAllLines(filePath);
+            foreach (var line in lines)
+            {
+                if (line.Trim() == "") continue;
+                instructions.Add(Int32.Parse(line));
+            }
+
+            //Console.WriteLine(string.Join(", ", instructions));
+
+            while (current_instruction_index < instructions.Count)
+            {
+
+                // follow instruction
+                int prev_index = current_instruction_index;
+                current_instruction_index += instructions[current_instruction_index];
+
+                instructions[prev_index]++;
+
+                followed_steps++;
+            }
+
+            return followed_steps;
+        }
+
+        static int Puzzle5_2(string filePath)
+        {
+            int followed_steps = 0;
+            int current_instruction_index = 0;
+            //List<int> instructions = fileInput.Split(new[] {'\r', '\n'}, StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x)).ToList();
+
+            List<int> instructions = new List<int>();
+            var lines = File.ReadAllLines(filePath);
+            foreach (var line in lines)
+            {
+                if (line.Trim() == "") continue;
+                instructions.Add(Int32.Parse(line));
+            }
+
+            while (current_instruction_index < instructions.Count)
+            {
+
+                // follow instruction
+                int prev_index = current_instruction_index;
+                current_instruction_index += instructions[current_instruction_index];
+
+                if (instructions[prev_index] >= 3)
+                {
+                    instructions[prev_index]--;
+                }
+                else instructions[prev_index]++;
+
+                followed_steps++;
+            }
+
+            return followed_steps;
+        }
+
+        static int Puzzle6(string filePath)
+        {
+            // 16 memory banks
+            // each bank any number of blocks
+            // balance blocks in banks
+            
+            // find most blocked bank, lowest num bank win
+            // takes all blocks from largest, distributes to all starting at +1
+            
+            // how many redistributions before same number of blocks in banks seen before
+
+            List<int> memory = File.ReadAllText(filePath).Split(new [] {'\t', ' '}, StringSplitOptions.RemoveEmptyEntries).Select(str => Int32.Parse(str)).ToList();
+
+            int sum = memory.Sum(i => i);
+
+            HashSet<string> previousStates = new HashSet<string>();
+            int heldBlocks = 0;
+            int redistributions = 0;
+
+            while (true)
+            {
+                // Find slot with highest
+                int highestIndex = 0;
+                for (int i = 1; i < memory.Count; i++)
+                {
+                    if (memory[i] > memory[highestIndex])
+                    {
+                        highestIndex = i;
+                    }
+                }
+
+                // Take all blocks out (increaseBlocks)
+                heldBlocks = memory[highestIndex];
+                memory[highestIndex] = 0;
+
+                // Redistribute the blocks from highestIndex + 1
+                int index = (highestIndex + 1) % memory.Count;
+                while (heldBlocks > 0)
+                {
+                    // add 1 to memory
+                    memory[index]++;
+                    heldBlocks--;
+                    index = (index + 1) % memory.Count;
+                }
+                redistributions++;
+                
+                // Check our state again
+                string state = string.Join(" ", memory);
+                //Console.WriteLine(state);
+                if (previousStates.Contains(state))
+                {
+                    return redistributions;
+                }
+                else
+                {
+                    previousStates.Add(state);
+                }
+            }
+        }
+
+        static void PrintState(int index, string memory, int heldBlocks)
+        {
+            Console.Clear();
+            int charIndex = 0;
+            for (int i = 0; i < index; i++)
+            {
+                charIndex = memory.IndexOf(' ', charIndex) + 1;
+            }
+
+            Console.WriteLine(memory);
+            Console.Write(String.Concat(Enumerable.Repeat(" ", charIndex)));
+            Console.WriteLine("^");
+            Console.WriteLine("Heldblocks: " + heldBlocks);
+        }
+
+        static int Puzzle6_2(string filePath)
+        {
+            List<int> memory = File.ReadAllText(filePath).Split(new [] {'\t', ' '}, StringSplitOptions.RemoveEmptyEntries).Select(str => Int32.Parse(str)).ToList();
+
+            int sum = memory.Sum(i => i);
+            
+            Dictionary<string ,int> previousStates = new Dictionary<string, int>();
+            int heldBlocks = 0;
+            int redistributions = 0;
+
+            while (true)
+            {
+                // Find slot with highest
+                int highestIndex = 0;
+                for (int i = 0; i < memory.Count; i++)
+                {
+                    if (memory[i] > memory[highestIndex])
+                    {
+                        highestIndex = i;
+                    }
+                }
+
+                // Take all blocks out (increaseBlocks)
+                heldBlocks = memory[highestIndex];
+                memory[highestIndex] = 0;
+
+                // Redistribute the blocks from highestIndex + 1
+                int index = (highestIndex + 1) % memory.Count;
+                while (heldBlocks > 0)
+                {
+                    // add 1 to memory
+                    memory[index]++;
+                    heldBlocks--;
+                    index = (index + 1) % memory.Count;
+
+                    //PrintState(index, string.Join(" ", memory), heldBlocks);
+                    //Console.ReadKey();
+                }
+                heldBlocks = 0;
+                redistributions++;
+                
+                // num_banks, num_blocks, 
+
+                
+                // Check our state again
+                string state = string.Join(" ", memory);
+                //Console.WriteLine(state);
+                if (previousStates.ContainsKey(state))
+                {
+                    return redistributions - previousStates[state];
+                }
+                else
+                {
+                    previousStates.Add(state, redistributions);
+                }
+            }
+        }
     }
 }
