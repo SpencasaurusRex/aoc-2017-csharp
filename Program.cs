@@ -82,6 +82,9 @@ namespace AOC2017
             int puzzleNumInput = (int)Double.Parse(puzzleSelect);
             
             int blynxy_out = 0; int spence_out = 0;
+            string blynxy_out_str = "";
+            string spence_out_str = "";
+
             switch(puzzleSelect) {
 
                 case "1":
@@ -145,6 +148,16 @@ namespace AOC2017
                     Console.WriteLine($"s:{spence_out}  b:{blynxy_out}");
                     break;
                 case "7":
+                    blynxy_out_str = Puzzle7(GetFilePath(puzzleSelect, Person.Blonxy));
+                    Console.WriteLine("\nSpencer Start");
+                    spence_out_str = Puzzle7(GetFilePath(puzzleSelect, Person.Spencer));
+                    Console.WriteLine($"s:{spence_out_str}  b:{blynxy_out_str}");
+                    break;
+                case "7.2":
+                    blynxy_out_str = Puzzle7_2(GetFilePath(puzzleSelect, Person.Blonxy));
+                    Console.WriteLine("\nSpencer Start");
+                    spence_out_str = Puzzle7_2(GetFilePath(puzzleSelect, Person.Spencer));
+                    Console.WriteLine($"s:{spence_out_str}  b:{blynxy_out_str}");
                     break;
                 case "8":
                     break;
@@ -950,5 +963,198 @@ namespace AOC2017
                 }
             }
         }
+
+        class Node
+        {
+            public Node parent;
+            public String name;
+            public int weight;
+            public int adjustedWeight;
+            public List<Node> children = new List<Node>();
+            public bool balanced;
+        }
+
+        static string Puzzle7(string filePath)
+        {
+            string[] lines = File.ReadAllLines(filePath);
+            Dictionary<string, Node> nodeLookup = new Dictionary<string, Node>();
+            
+            // word (weight) -> child, child 
+
+            foreach (string line in lines) {
+                // word ' ' () -> read to \n
+                string[] words = line.Split(new[] {' ', '(', ')', '-', '>', ','}, StringSplitOptions.RemoveEmptyEntries);
+
+                if (words[0] == "xxardqs")
+                {
+                    Console.WriteLine("AAAAAA");
+                }
+
+                Node node = GetNode(words[0], nodeLookup);
+                node.weight = int.Parse(words[1]);
+
+                // A: b c d, f, b: f e, g, c: g
+                node.children = words.Where((w,i) => i >= 2).Select(w => GetNode(w, nodeLookup)).ToList();
+
+                foreach( Node n in node.children)
+                {
+                    n.parent = node;
+                }
+            }
+
+            Node root = nodeLookup.Values.First();
+            while (root.parent != null)
+            {
+                root = root.parent;
+            }
+
+            return root.name;
+        }
+
+        static string Puzzle7_2(string filePath)
+        {
+            string[] lines = File.ReadAllLines(filePath);
+            Dictionary<string, Node> nodeLookup = new Dictionary<string, Node>();
+            
+            // word (weight) -> child, child 
+
+            foreach (string line in lines) {
+                // word ' ' () -> read to \n
+                string[] words = line.Split(new[] {' ', '(', ')', '-', '>', ','}, StringSplitOptions.RemoveEmptyEntries);
+
+                if (words[0] == "xxardqs")
+                {
+                    Console.WriteLine("AAAAAA");
+                }
+
+                Node node = GetNode(words[0], nodeLookup);
+                node.weight = int.Parse(words[1]);
+
+                // A: b c d, f, b: f e, g, c: g
+                node.children = words.Where((w,i) => i >= 2).Select(w => GetNode(w, nodeLookup)).ToList();
+
+                foreach( Node n in node.children)
+                {
+                    n.parent = node;
+                }
+            }
+
+            Node root = nodeLookup.Values.First();
+            while (root.parent != null)
+            {
+                root = root.parent;
+            }
+
+            Console.WriteLine("Totaling Weight");
+            // Depth first sum
+            var aoeu = TotalWeights(root);
+
+            Console.WriteLine("Parent is balanced: " + root.balanced);
+
+            Node unbalancedNode = root;
+            foreach (var c in unbalancedNode.children)
+            {
+                if (!c.balanced)
+                {
+                    unbalancedNode = c;
+                    continue;
+                }
+            }
+            //       no more children                or        children all balanced
+            while (unbalancedNode.children.Select(x => x.weight).Distinct().Count() > 1)
+            {
+                var foundNext = false;
+                foreach (Node c in unbalancedNode.children)
+                {
+                    if (!c.balanced)
+                    {
+                        unbalancedNode = c;
+                        foundNext = true;
+                        break;
+                    }
+
+                }
+                // if unbalancedNode == same
+                if (!foundNext){
+                    // Console.WriteLine
+                    Console.WriteLine($"{unbalancedNode.name}: {unbalancedNode.children.Count}");
+                    break;
+                }
+
+            }
+
+            // delta = siblingAdjustedWeight - adjusted
+            // weight + siblingAdjustedWeight - adjusted
+            Console.WriteLine("I have " + (unbalancedNode.parent.children.Count - 1) + " siblings");
+
+            int commonWeight = unbalancedNode.children.GroupBy(c => c.adjustedWeight).Where(x => x.Count() > 1)
+                .Select(k => k.Key).FirstOrDefault();
+            Node uniqueBoi = unbalancedNode.children.First(x => x.adjustedWeight != commonWeight);
+
+            Console.WriteLine();
+            return (uniqueBoi.weight + commonWeight - uniqueBoi.adjustedWeight).ToString();
+            //int good = 0; int next= 0; int next2=0; int bad = 0;
+            //// 1 2 2 2 
+            //foreach (var c in unbalancedNode.children)
+            //{
+            //    if (next == 0) {
+            //        next = c.adjustedWeight;
+            //        continue;
+            //    }
+            //    if (next == c.adjustedWeight) {
+            //        good = c.adjustedWeight;
+            //        continue;
+            //    }
+            //    if (next2 == 0) {
+            //        next2 = c.adjustedWeight;
+            //        continue;
+            //    }
+            //    if (good != c.adjustedWeight) {
+            //        bad = c.adjustedWeight;
+            //        continue;
+            //    }
+            //    if (next == c.adjustedWeight) {
+            //        good = next;
+            //        bad = next2;
+            //    } else {
+            //        good = next2;
+            //        bad = next;
+            //    }
+
+                
+            //}
+            
+            //return (unbalancedNode.weight + good - bad).ToString();
+
+
+            return "uh oh";
+        }
+
+        static int TotalWeights(Node n)
+        {
+            int total = 0;
+            foreach (var c in n.children)
+            {
+                total += TotalWeights(c);
+            }
+
+            if (n.children.Count > 0)
+            {
+                n.balanced = n.children.Select(x => x.adjustedWeight).Distinct().Count() == 1;
+            }
+            else n.balanced = true;
+
+            n.adjustedWeight = total + n.weight;
+            return n.adjustedWeight;
+        }
+
+        static Node GetNode(string name , Dictionary<string,Node> nl) {
+            if(nl.ContainsKey(name))
+                return nl[name];
+            var node = new Node{name = name};
+            nl.Add(name, node);
+            return node;
+        }
+
     }
 }
